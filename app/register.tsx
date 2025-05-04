@@ -13,19 +13,18 @@ import { AlertCircleIcon } from "@/components/ui/icon";
 import React, { useEffect } from "react";
 import "@/global.css";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
-import { View, Text } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { Box } from "@/components/ui/box";
 import { useFonts } from "expo-font";
 import { SplashScreen } from "expo-router";
 import { ArrowLeftIcon } from "lucide-react-native";
-import { useNavigation } from "@react-navigation/native";
-import { Pressable } from "react-native";
 import { useRouter } from "expo-router";
 
-export default function Login() {
+export default function Register() {
+  const router = useRouter();
   const [fontsLoaded] = useFonts({
-    Montserrat: require("../../../assets/fonts/Montserrat_400Regular.ttf"),
-    MontserratB: require("../../../assets/fonts/Montserrat_700Bold.ttf"),
+    Montserrat: require("../assets/fonts/Montserrat_400Regular.ttf"),
+    MontserratB: require("../assets/fonts/Montserrat_700Bold.ttf"),
   });
 
   useEffect(() => {
@@ -40,9 +39,6 @@ export default function Login() {
   if (!fontsLoaded) {
     return null;
   }
-
-  const router = useRouter();
-
   return (
     <GluestackUIProvider mode="light">
       <View className="flex-1 w-full items-center">
@@ -53,7 +49,7 @@ export default function Login() {
           <Pressable
             onPress={() => {
               console.log("Arrow clicked");
-              router.push("/screens/app/Home/Home");
+              router.back();
             }}
           >
             <ArrowLeftIcon size={28} color="#123458" />
@@ -70,7 +66,7 @@ export default function Login() {
             className="text-xl text-center self-center pb-14"
             style={{ fontFamily: "Montserrat" }}
           >
-            Glad to see you back!
+            Enter your details below
           </Text>
           <Box className="w-full">
             <FormControl>
@@ -102,33 +98,31 @@ export default function Login() {
             </FormControl>
           </Box>
           <Button
-            className="w-full self-center mt-4"
+            className="w-full self-center mt-4 py-3 px-8 rounded-xl"
             size="lg"
             style={{ backgroundColor: "#123458" }}
-            onPress={() => {
-              console.log("Login is pressed!");
-            }}
+            onPress={() => console.log("Regsiter is pressed!")}
           >
-            <ButtonText style={{ fontFamily: "Montserrat" }}>LOGIN</ButtonText>
+            <ButtonText style={{ fontFamily: "Montserrat" }}>
+              REGISTER
+            </ButtonText>
           </Button>
           <Text
             className="w-full mt-4 text-center"
             style={{ fontFamily: "Montserrat" }}
           >
-            Not a user yet?
+            Already a user ?
           </Text>
           <Button
-            className="w-full self-center mt-4"
+            className="w-full self-center mt-4 py-3 px-8 rounded-xl"
             size="lg"
             style={{ backgroundColor: "#123458" }}
             onPress={() => {
-              console.log("Register is pressed");
-              router.push("/screens/auth/Register");
+              console.log("Login is pressed");
+              router.push("/login");
             }}
           >
-            <ButtonText style={{ fontFamily: "Montserrat" }}>
-              REGISTER
-            </ButtonText>
+            <ButtonText style={{ fontFamily: "Montserrat" }}>LOGIN</ButtonText>
           </Button>
         </VStack>
       </View>
