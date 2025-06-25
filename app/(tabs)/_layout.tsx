@@ -8,14 +8,14 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Dashboard",
-          tabBarIcon: () => <AntDesign name="home" size={24} color="black" />,
+          tabBarIcon: () => <AntDesign name="home" size={15} color="black" />,
         }}
       />
       <Tabs.Screen
         name="transactions"
         options={{
           title: "Transactions",
-          tabBarIcon: () => <AntDesign name="inbox" size={24} color="black" />,
+          tabBarIcon: () => <AntDesign name="inbox" size={15} color="black" />,
         }}
       />
       <Tabs.Screen
@@ -23,7 +23,7 @@ export default function TabLayout() {
         options={{
           title: "Add Expense",
           tabBarIcon: () => (
-            <AntDesign name="pluscircle" size={24} color="black" />
+            <AntDesign name="pluscircle" size={15} color="black" />
           ),
         }}
       />
@@ -32,7 +32,7 @@ export default function TabLayout() {
         options={{
           title: "Profile",
           tabBarIcon: () => (
-            <AntDesign name="setting" size={24} color="black" />
+            <AntDesign name="setting" size={15} color="black" />
           ),
         }}
       />
