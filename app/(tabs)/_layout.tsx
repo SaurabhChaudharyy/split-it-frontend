@@ -8,6 +8,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Dashboard",
+          headerShown: false,
           tabBarIcon: () => <AntDesign name="home" size={15} color="black" />,
         }}
       />
@@ -15,6 +16,7 @@ export default function TabLayout() {
         name="transactions"
         options={{
           title: "Transactions",
+          headerShown: false,
           tabBarIcon: () => <AntDesign name="inbox" size={15} color="black" />,
         }}
       />
@@ -22,6 +24,7 @@ export default function TabLayout() {
         name="add_expense"
         options={{
           title: "Add Expense",
+          headerShown: false,
           tabBarIcon: () => (
             <AntDesign name="pluscircle" size={15} color="black" />
           ),
@@ -31,6 +34,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Profile",
+          headerShown: false,
           tabBarIcon: () => (
             <AntDesign name="setting" size={15} color="black" />
           ),

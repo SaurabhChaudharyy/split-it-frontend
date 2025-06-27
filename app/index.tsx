@@ -33,21 +33,14 @@ export default function Welcome() {
   return (
     <GluestackUIProvider>
       <View className="flex-1 w-full">
-        <View style={styles.container}>
-          <Image
-            style={styles.image}
-            source={require("../assets/images/logo.png")}
-            contentFit="cover"
-            transition={1000}
-          />
-        </View>
-        <Text
-          className="text-6xl text-[#123458] self-center font-bold "
-          style={{ fontFamily: "Montserrat" }}
-        >
-          DIV/DE
-        </Text>
-
+        <Center className="pt-72">
+          <Text
+            className="text-6xl text-[#123458] font-bold"
+            style={{ fontFamily: "Montserrat" }}
+          >
+            DIV/DE
+          </Text>
+        </Center>
         <Center className="flex-1 px-8 py-8 items-center justify-center">
           <VStack space="lg" className="w-full max-w-[320px] mt-5">
             <Button
@@ -82,23 +75,3 @@ export default function Welcome() {
     </GluestackUIProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 100,
-    marginBottom: -100,
-    width: "40%",
-    height: "40%",
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  image: {
-    width: "100%",
-    height: "50%",
-    backgroundColor: "#fff",
-    resizeMode: "contain",
-  },
-});
