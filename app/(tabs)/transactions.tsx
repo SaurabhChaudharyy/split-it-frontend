@@ -5,9 +5,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
+  Alert, // Add Alert for error messages
 } from "react-native";
 import { useState, useEffect } from "react";
 import { useFonts } from "expo-font";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Add AsyncStorage
+import { router } from "expo-router"; // Add router
 
 export default function Expense() {
   const [fontsLoaded] = useFonts({
@@ -26,130 +29,47 @@ export default function Expense() {
     return null;
   }
 
-  // Mock transaction data - Replace with actual API call
-  const mockTransactions = [
-    {
-      id: 1,
-      name: "Dinner at Pizza Palace",
-      amount: 85.5,
-      category: "food",
-      date: "2024-06-20T18:30:00Z",
-      splitWith: {
-        username: "john_doe",
-        fullName: "John Doe",
-      },
-      splitMode: "user1_paid_split_equal",
-      userShare: 42.75,
-      otherUserShare: 42.75,
-      status: "you_paid",
-      settled: false,
-    },
-    {
-      id: 2,
-      name: "Grocery Shopping",
-      amount: 120.4,
-      category: "groceries",
-      date: "2024-06-19T14:15:00Z",
-      splitWith: {
-        username: "sarah_smith",
-        fullName: "Sarah Smith",
-      },
-      splitMode: "user2_paid_split_equal",
-      userShare: 60.2,
-      otherUserShare: 60.2,
-      status: "they_paid",
-      settled: false,
-    },
-    {
-      id: 3,
-      name: "Movie Tickets",
-      amount: 40.0,
-      category: "entertainment",
-      date: "2024-06-18T19:45:00Z",
-      splitWith: {
-        username: "mike_wilson",
-        fullName: "Mike Wilson",
-      },
-      splitMode: "user1_paid_split_equal",
-      userShare: 20.0,
-      otherUserShare: 20.0,
-      status: "you_paid",
-      settled: true,
-    },
-    {
-      id: 4,
-      name: "Uber Ride to Airport",
-      amount: 65.8,
-      category: "transportation",
-      date: "2024-06-17T08:20:00Z",
-      splitWith: {
-        username: "emma_davis",
-        fullName: "Emma Davis",
-      },
-      splitMode: "user2_paid_no_split",
-      userShare: 0,
-      otherUserShare: 65.8,
-      status: "they_paid",
-      settled: false,
-    },
-    {
-      id: 5,
-      name: "Coffee & Breakfast",
-      amount: 28.6,
-      category: "food",
-      date: "2024-06-16T09:10:00Z",
-      splitWith: {
-        username: "alex_brown",
-        fullName: "Alex Brown",
-      },
-      splitMode: "user1_paid_split_equal",
-      userShare: 14.3,
-      otherUserShare: 14.3,
-      status: "you_paid",
-      settled: false,
-    },
-    {
-      id: 6,
-      name: "Gym Membership Split",
-      amount: 150.0,
-      category: "fitness",
-      date: "2024-06-15T16:00:00Z",
-      splitWith: {
-        username: "sarah_smith",
-        fullName: "Sarah Smith",
-      },
-      splitMode: "user1_paid_split_equal",
-      userShare: 75.0,
-      otherUserShare: 75.0,
-      status: "you_paid",
-      settled: false,
-    },
-  ];
-
   // Fetch transactions data
   const fetchTransactions = async () => {
     try {
       setIsLoading(true);
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert(
+          "Authentication Error",
+          "Please log in to view transactions.",
+        );
+        router.push("/login");
+        return;
+      }
 
-      // Replace with actual API call
-      // const token = await AsyncStorage.getItem('token');
-      // const response = await fetch('YOUR_API_ENDPOINT/transactions', {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
-      // const data = await response.json();
+      const response = await fetch("http://13.201.80.26/transactions", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (response.status === 401) {
+        Alert.alert("Session Expired", "Please login again");
+        await AsyncStorage.removeItem("token");
+        router.push("/login");
+        return;
+      }
 
-      const sortedTransactions = mockTransactions.sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
-      );
-      setTransactions(sortedTransactions);
-      setFilteredTransactions(sortedTransactions);
+      if (response.ok) {
+        const sortedTransactions = data.sort(
+          (a, b) => new Date(b.date) - new Date(a.date),
+        );
+        setTransactions(sortedTransactions);
+        setFilteredTransactions(sortedTransactions);
+      } else {
+        Alert.alert("Error", data.error || "Failed to fetch transactions");
+        console.error("Failed to fetch transactions:", data.error);
+      }
     } catch (error) {
+      Alert.alert("Error", "Network error. Please try again.");
       console.error("Error fetching transactions:", error);
     } finally {
       setIsLoading(false);
@@ -180,7 +100,7 @@ export default function Expense() {
         (t) =>
           t.name.toLowerCase().includes(search.toLowerCase()) ||
           t.splitWith.fullName.toLowerCase().includes(search.toLowerCase()) ||
-          t.category.toLowerCase().includes(search.toLowerCase())
+          t.category.toLowerCase().includes(search.toLowerCase()),
       );
     }
 
@@ -215,6 +135,11 @@ export default function Expense() {
       healthcare: "💊",
       education: "📚",
       travel: "✈️",
+      clothing: "👕",
+      personal_care: "💳", // Corrected key for personal care
+      maintenance: "🔧",
+      subscriptions: "📱",
+      business: "💼",
       other: "📊",
     };
     return icons[category] || "📊";
@@ -223,9 +148,10 @@ export default function Expense() {
   const formatDate = (dateString: any) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now - date);
+    const diffTime = Math.abs(now.getTime() - date.getTime()); // Use getTime() for accurate calculation
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+    if (diffDays === 0) return "Today"; // Added 'Today'
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
     return date.toLocaleDateString();
@@ -237,21 +163,29 @@ export default function Expense() {
     }
 
     if (transaction.status === "you_paid") {
-      if (transaction.userShare === transaction.amount) {
+      if (
+        transaction.splitMode === "user1_paid_no_split" ||
+        transaction.splitWith.fullName === "No Split User"
+      ) {
         return { text: "You paid (no split)", color: "#3b82f6" };
       }
       return {
         text: `${
           transaction.splitWith.fullName
-        } owes you $${transaction.otherUserShare.toFixed(2)}`,
+        } owes you ₹${transaction.otherUserShare.toFixed(2)}`,
         color: "#10b981",
       };
     } else {
-      if (transaction.otherUserShare === transaction.amount) {
-        return { text: "They paid (no split)", color: "#6b7280" };
+      // status === "they_paid"
+      if (transaction.splitMode === "user2_paid_no_split") {
+        // They paid everything, you owe them full amount
+        return {
+          text: `You owe ₹${transaction.amount.toFixed(2)}`,
+          color: "#ef4444",
+        };
       }
       return {
-        text: `You owe $${transaction.userShare.toFixed(2)}`,
+        text: `You owe ₹${transaction.userShare.toFixed(2)}`, // userShare is what current user is responsible for
         color: "#ef4444",
       };
     }
@@ -387,7 +321,7 @@ export default function Expense() {
                 className="text-gray-600"
                 style={{ fontFamily: "Montserrat" }}
               >
-                Total amount: $
+                Total amount: ₹
                 {filteredTransactions
                   .reduce((sum, t) => sum + t.amount, 0)
                   .toFixed(2)}
@@ -476,7 +410,7 @@ export default function Expense() {
                         className="text-xl font-bold text-gray-800 mb-1"
                         style={{ fontFamily: "MontserratB" }}
                       >
-                        ${transaction.amount.toFixed(2)}
+                        ₹{transaction.amount.toFixed(2)}
                       </Text>
 
                       {transaction.settled && (

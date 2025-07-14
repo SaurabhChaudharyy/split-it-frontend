@@ -5,10 +5,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   Modal,
+  Alert, // Add Alert
 } from "react-native";
 import { useState, useEffect } from "react";
 import { useFonts } from "expo-font";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Add AsyncStorage
 
 export default function Profile() {
   const [fontsLoaded] = useFonts({
@@ -17,12 +19,12 @@ export default function Profile() {
   });
 
   const [profileData, setProfileData] = useState({
-    fullName: "John Doe",
-    username: "john_doe",
-    email: "john.doe@example.com",
-    totalExpenses: 1250.75,
-    totalFriends: 12,
-    settledExpenses: 45,
+    fullName: "",
+    username: "",
+    email: "",
+    totalExpenses: 0,
+    totalFriends: 0,
+    settledExpenses: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,8 +38,36 @@ export default function Profile() {
   const fetchProfileData = async () => {
     try {
       setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Authentication Error", "Please log in to view profile.");
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch("http://13.201.80.26/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+
+      if (response.status === 401) {
+        Alert.alert("Session Expired", "Please login again");
+        await AsyncStorage.removeItem("token");
+        router.push("/login");
+        return;
+      }
+
+      if (response.ok) {
+        setProfileData(data);
+      } else {
+        Alert.alert("Error", data.error || "Failed to fetch profile data");
+        console.error("Error fetching profile data:", data.error);
+      }
     } catch (error) {
+      Alert.alert("Error", "Network error. Please try again.");
       console.error("Error fetching profile data:", error);
     } finally {
       setIsLoading(false);
@@ -56,9 +86,10 @@ export default function Profile() {
   }, []);
 
   // Handle sign out
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     console.log("User Signout");
     setShowSignOutModal(false);
+    await AsyncStorage.removeItem("token"); // Clear the token
     router.push("/login");
   };
 
@@ -127,24 +158,6 @@ export default function Profile() {
               >
                 @{profileData.username}
               </Text>
-            </View>
-
-            {/* Contact Info */}
-            <View className="border-t border-gray-200 pt-4">
-              <View className="mb-3">
-                <Text
-                  className="text-sm text-gray-500 mb-1"
-                  style={{ fontFamily: "Montserrat" }}
-                >
-                  Email
-                </Text>
-                <Text
-                  className="text-base text-gray-800"
-                  style={{ fontFamily: "MontserratB" }}
-                >
-                  {profileData.email}
-                </Text>
-              </View>
             </View>
           </View>
 

@@ -1,3 +1,5 @@
+import React, { useEffect, useState } from "react"; // Add useState
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Add AsyncStorage
 import { Button, ButtonText } from "@/components/ui/button";
 import {
   FormControl,
@@ -10,7 +12,6 @@ import {
 import { Input, InputField } from "@/components/ui/input";
 import { VStack } from "@/components/ui/vstack";
 import { AlertCircleIcon } from "@/components/ui/icon";
-import React, { useEffect } from "react";
 import "@/global.css";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { View, Text } from "react-native";
@@ -23,6 +24,9 @@ import { useRouter } from "expo-router";
 
 export default function Login() {
   const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(""); // For displaying login errors
 
   const [fontsLoaded] = useFonts({
     Montserrat: require("../assets/fonts/Montserrat_400Regular.ttf"),
@@ -37,6 +41,38 @@ export default function Login() {
     };
     hideSplash();
   }, [fontsLoaded]);
+
+  const handleLogin = async () => {
+    setError(""); // Clear previous errors
+    if (!username || !password) {
+      setError("Please enter both username and password.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://13.201.80.26/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        await AsyncStorage.setItem("token", data.access_token);
+        console.log("Login successful:", data);
+        router.replace("/(tabs)");
+      } else {
+        setError(data.error || "Login failed. Please try again.");
+        console.error("Login failed:", data.error);
+      }
+    } catch (err) {
+      setError("Network error. Please try again.");
+      console.error("Network error during login:", err);
+    }
+  };
 
   if (!fontsLoaded) {
     return null;
@@ -72,7 +108,7 @@ export default function Login() {
             Glad to see you back!
           </Text>
           <Box className="w-full">
-            <FormControl>
+            <FormControl isInvalid={!!error}>
               <FormControlLabel>
                 <FormControlLabelText
                   className="w-full"
@@ -82,7 +118,11 @@ export default function Login() {
                 </FormControlLabelText>
               </FormControlLabel>
               <Input className="my-1 w-full">
-                <InputField type="text" />
+                <InputField
+                  type="text"
+                  value={username}
+                  onChangeText={setUsername}
+                />
               </Input>
               <FormControlLabel>
                 <FormControlLabelText style={{ fontFamily: "Montserrat" }}>
@@ -90,24 +130,25 @@ export default function Login() {
                 </FormControlLabelText>
               </FormControlLabel>
               <Input className="my-1 w-full">
-                <InputField type="password" />
+                <InputField
+                  type="password"
+                  value={password}
+                  onChangeText={setPassword}
+                />
               </Input>
-              <FormControlError>
-                <FormControlErrorIcon as={AlertCircleIcon} />
-                <FormControlErrorText>
-                  Atleast 6 characters are required.
-                </FormControlErrorText>
-              </FormControlError>
+              {error && (
+                <FormControlError>
+                  <FormControlErrorIcon as={AlertCircleIcon} />
+                  <FormControlErrorText>{error}</FormControlErrorText>
+                </FormControlError>
+              )}
             </FormControl>
           </Box>
           <Button
             className="w-full self-center mt-4 py-3 px-8 rounded-xl"
             size="lg"
             style={{ backgroundColor: "#123458" }}
-            onPress={() => {
-              router.replace("/(tabs)");
-              console.log("Login is pressed!");
-            }}
+            onPress={handleLogin}
           >
             <ButtonText style={{ fontFamily: "Montserrat" }}>LOGIN</ButtonText>
           </Button>

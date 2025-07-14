@@ -1,4 +1,5 @@
 import { ScrollView, View, Text, TouchableOpacity, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Keep this import
 import { useState } from "react";
 import { useFonts } from "expo-font";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { ChevronDownIcon } from "@/components/ui/icon";
 import { Input, InputField } from "@/components/ui/input";
+import { router } from "expo-router";
 
 export default function Expense() {
   const [fontsLoaded] = useFonts({
@@ -77,7 +79,8 @@ export default function Expense() {
     // Check if split_with_user is required for certain split modes
     if (
       (splitMode === "user2_paid_split_equal" ||
-        splitMode === "user2_paid_no_split") &&
+        splitMode === "user2_paid_no_split" ||
+        splitMode === "user1_paid_split_equal") && // user1_paid_split_equal also requires a split_with user
       !splitWithUser.trim()
     ) {
       Alert.alert("Error", "Please enter the username to split with");
@@ -87,8 +90,12 @@ export default function Expense() {
     setIsLoading(true);
 
     try {
-      // Get JWT token from storage (you'll need to implement this based on your auth setup)
-      // const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Authentication Error", "Please log in to add expenses.");
+        router.push("/login");
+        return;
+      }
 
       const expenseData = {
         name: expenseName.trim(),
@@ -98,16 +105,23 @@ export default function Expense() {
         split_with: splitWithUser.trim() || null,
       };
 
-      const response = await fetch("YOUR_API_ENDPOINT/add_expense", {
+      const response = await fetch("http://13.201.80.26/add_expense", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // 'Authorization': `Bearer ${token}`, // Uncomment when you have token setup
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(expenseData),
       });
 
       const result = await response.json();
+
+      if (response.status === 401) {
+        Alert.alert("Session Expired", "Please login again");
+        await AsyncStorage.removeItem("token"); // Clear invalid token
+        router.push("/login");
+        return;
+      }
 
       if (response.ok) {
         Alert.alert("Success", result.message || "Expense added successfully!");
@@ -256,6 +270,12 @@ export default function Expense() {
                   placeholder="Choose a category"
                   className="text-gray-800"
                   style={{ fontFamily: "Montserrat" }}
+                  value={
+                    selectedCategory
+                      ? selectedCategory.charAt(0).toUpperCase() +
+                        selectedCategory.slice(1).replace(/_/g, " ")
+                      : ""
+                  } // Display selected category
                 />
                 <SelectIcon className="mr-3" as={ChevronDownIcon} />
               </SelectTrigger>
@@ -319,6 +339,7 @@ export default function Expense() {
                   placeholder="Choose split mode"
                   className="text-gray-800"
                   style={{ fontFamily: "Montserrat" }}
+                  value={getSplitModeLabel(splitMode)} // Display selected split mode
                 />
                 <SelectIcon className="mr-3" as={ChevronDownIcon} />
               </SelectTrigger>

@@ -10,7 +10,7 @@ import {
 import { Input, InputField } from "@/components/ui/input";
 import { VStack } from "@/components/ui/vstack";
 import { AlertCircleIcon } from "@/components/ui/icon";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react"; // Add useState
 import "@/global.css";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { View, Text, Pressable } from "react-native";
@@ -22,6 +22,12 @@ import { useRouter } from "expo-router";
 
 export default function Register() {
   const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [error, setError] = useState("");
+
   const [fontsLoaded] = useFonts({
     Montserrat: require("../assets/fonts/Montserrat_400Regular.ttf"),
     MontserratB: require("../assets/fonts/Montserrat_700Bold.ttf"),
@@ -35,6 +41,46 @@ export default function Register() {
     };
     hideSplash();
   }, [fontsLoaded]);
+
+  const handleRegister = async () => {
+    setError(""); // Clear previous errors
+    if (!username || !password || !confirmPassword || !fullName) {
+      setError("All fields are required.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://13.201.80.26/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password, fullName }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Registration successful:", data);
+        alert(data.message);
+        router.push("/login");
+      } else {
+        setError(data.error || "Registration failed. Please try again.");
+        console.error("Registration failed:", data.error);
+      }
+    } catch (err) {
+      setError("Network error. Please try again.");
+      console.error("Network error during registration:", err);
+    }
+  };
 
   if (!fontsLoaded) {
     return null;
@@ -69,7 +115,22 @@ export default function Register() {
             Enter your details below
           </Text>
           <Box className="w-full">
-            <FormControl>
+            <FormControl isInvalid={!!error}>
+              <FormControlLabel>
+                <FormControlLabelText
+                  className="w-full"
+                  style={{ fontFamily: "Montserrat" }}
+                >
+                  Full Name
+                </FormControlLabelText>
+              </FormControlLabel>
+              <Input className="my-1 w-full">
+                <InputField
+                  type="text"
+                  value={fullName}
+                  onChangeText={setFullName}
+                />
+              </Input>
               <FormControlLabel>
                 <FormControlLabelText
                   className="w-full"
@@ -79,7 +140,11 @@ export default function Register() {
                 </FormControlLabelText>
               </FormControlLabel>
               <Input className="my-1 w-full">
-                <InputField type="text" />
+                <InputField
+                  type="text"
+                  value={username}
+                  onChangeText={setUsername}
+                />
               </Input>
               <FormControlLabel>
                 <FormControlLabelText style={{ fontFamily: "Montserrat" }}>
@@ -87,21 +152,37 @@ export default function Register() {
                 </FormControlLabelText>
               </FormControlLabel>
               <Input className="my-1 w-full">
-                <InputField type="password" />
+                <InputField
+                  type="password"
+                  value={password}
+                  onChangeText={setPassword}
+                />
               </Input>
-              <FormControlError>
-                <FormControlErrorIcon as={AlertCircleIcon} />
-                <FormControlErrorText>
-                  Atleast 6 characters are required.
-                </FormControlErrorText>
-              </FormControlError>
+              <FormControlLabel>
+                <FormControlLabelText style={{ fontFamily: "Montserrat" }}>
+                  Confirm Password
+                </FormControlLabelText>
+              </FormControlLabel>
+              <Input className="my-1 w-full">
+                <InputField
+                  type="password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+              </Input>
+              {error && (
+                <FormControlError>
+                  <FormControlErrorIcon as={AlertCircleIcon} />
+                  <FormControlErrorText>{error}</FormControlErrorText>
+                </FormControlError>
+              )}
             </FormControl>
           </Box>
           <Button
             className="w-full self-center mt-4 py-3 px-8 rounded-xl"
             size="lg"
             style={{ backgroundColor: "#123458" }}
-            onPress={() => console.log("Regsiter is pressed!")}
+            onPress={handleRegister}
           >
             <ButtonText style={{ fontFamily: "Montserrat" }}>
               REGISTER

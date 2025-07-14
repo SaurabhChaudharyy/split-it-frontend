@@ -4,9 +4,12 @@ import {
   Text,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useState, useEffect } from "react";
 import { useFonts } from "expo-font";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 
 export default function Dashboard() {
   const [fontsLoaded] = useFonts({
@@ -27,70 +30,40 @@ export default function Dashboard() {
     return null;
   }
 
-  // Mock data - Replace with actual API call
-  const mockData = {
-    totalBalance: -125.5,
-    totalToGive: 275.3,
-    totalToReceive: 149.8,
-    userBalances: [
-      {
-        id: 1,
-        username: "john_doe",
-        fullName: "John Doe",
-        balance: -85.5, // You owe John $85.50
-        lastTransaction: "Dinner at Pizza Place",
-      },
-      {
-        id: 2,
-        username: "sarah_smith",
-        fullName: "Sarah Smith",
-        balance: 65.2, // Sarah owes you $65.20
-        lastTransaction: "Grocery shopping",
-      },
-      {
-        id: 3,
-        username: "mike_wilson",
-        fullName: "Mike Wilson",
-        balance: -40.0, // You owe Mike $40.00
-        lastTransaction: "Movie tickets",
-      },
-      {
-        id: 4,
-        username: "emma_davis",
-        fullName: "Emma Davis",
-        balance: 84.6, // Emma owes you $84.60
-        lastTransaction: "Uber ride",
-      },
-      {
-        id: 5,
-        username: "alex_brown",
-        fullName: "Alex Brown",
-        balance: -65.2, // You owe Alex $65.20
-        lastTransaction: "Coffee meetup",
-      },
-    ],
-  };
-
-  // Fetch balance data
   const fetchBalanceData = async () => {
     try {
       setIsLoading(true);
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Authentication Error", "Please log in to view dashboard.");
+        router.push("/login");
+        return;
+      }
 
-      // Replace with actual API call
-      // const token = await AsyncStorage.getItem('token');
-      // const response = await fetch('YOUR_API_ENDPOINT/dashboard', {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
-      // const data = await response.json();
+      const response = await fetch("http://13.201.80.26/dashboard", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const data = await response.json();
 
-      setBalanceData(mockData);
+      if (response.status === 401) {
+        Alert.alert("Session Expired", "Please login again");
+        await AsyncStorage.removeItem("token");
+        router.push("/login");
+        return;
+      }
+
+      if (response.ok) {
+        setBalanceData(data);
+      } else {
+        Alert.alert("Error", data.error || "Failed to fetch dashboard data");
+        console.error("Failed to fetch dashboard data:", data.error);
+      }
     } catch (error) {
+      Alert.alert("Error", "Network error. Please try again.");
       console.error("Error fetching balance data:", error);
     } finally {
       setIsLoading(false);
@@ -115,14 +88,14 @@ export default function Dashboard() {
   };
 
   const getBalanceText = (balance: any) => {
-    if (balance > 0) return `owes you $${Math.abs(balance).toFixed(2)}`;
-    if (balance < 0) return `you owe $${Math.abs(balance).toFixed(2)}`;
+    if (balance > 0) return `owes you ₹${Math.abs(balance).toFixed(2)}`;
+    if (balance < 0) return `you owe ₹${Math.abs(balance).toFixed(2)}`;
     return "all settled";
   };
 
   const getTotalBalanceText = () => {
     const { totalBalance } = balanceData;
-    if (totalBalance > 0) return `You are owed $${totalBalance.toFixed(2)}`;
+    if (totalBalance > 0) return `You are owed ₹${totalBalance.toFixed(2)}`;
     if (totalBalance < 0)
       return `You owe ₹${Math.abs(totalBalance).toFixed(2)}`;
     return "All expenses settled";
@@ -245,59 +218,77 @@ export default function Dashboard() {
 
         {/* User Balance Cards */}
         <View className="mx-2 space-y-3">
-          {balanceData.userBalances.map((user) => (
-            <TouchableOpacity
-              key={user.id}
-              className="bg-white rounded-xl shadow-lg p-4"
-              activeOpacity={0.7}
-            >
-              <View className="flex-row items-center">
-                {/* User Info */}
-                <View className="flex-1">
-                  <Text
-                    className="text-lg font-bold text-gray-800 mb-1"
-                    style={{ fontFamily: "MontserratB" }}
-                  >
-                    {user.fullName}
-                  </Text>
-                  <Text
-                    className="text-sm text-gray-500 mb-1"
-                    style={{ fontFamily: "Montserrat" }}
-                  >
-                    @{user.username}
-                  </Text>
-                  <Text
-                    className="text-xs text-gray-400"
-                    style={{ fontFamily: "Montserrat" }}
-                  >
-                    Last transaction • {user.lastTransaction}
-                  </Text>
-                </View>
+          {balanceData.userBalances.length === 0 ? (
+            <View className="bg-white rounded-xl p-8 items-center">
+              <Text className="text-4xl mb-4">👥</Text>
+              <Text
+                className="text-gray-600 text-center text-lg"
+                style={{ fontFamily: "MontserratB" }}
+              >
+                No balances with friends yet!
+              </Text>
+              <Text
+                className="text-gray-500 text-center mt-2"
+                style={{ fontFamily: "Montserrat" }}
+              >
+                Add an expense to start splitting.
+              </Text>
+            </View>
+          ) : (
+            balanceData.userBalances.map((user) => (
+              <TouchableOpacity
+                key={user.id}
+                className="bg-white rounded-xl shadow-lg p-4"
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center">
+                  {/* User Info */}
+                  <View className="flex-1">
+                    <Text
+                      className="text-lg font-bold text-gray-800 mb-1"
+                      style={{ fontFamily: "MontserratB" }}
+                    >
+                      {user.fullName}
+                    </Text>
+                    <Text
+                      className="text-sm text-gray-500 mb-1"
+                      style={{ fontFamily: "Montserrat" }}
+                    >
+                      @{user.username}
+                    </Text>
+                    <Text
+                      className="text-xs text-gray-400"
+                      style={{ fontFamily: "Montserrat" }}
+                    >
+                      Last transaction • {user.lastTransaction}
+                    </Text>
+                  </View>
 
-                {/* Balance */}
-                <View className="items-end">
-                  <Text
-                    className="text-lg font-bold mb-1"
-                    style={{
-                      fontFamily: "MontserratB",
-                      color: getBalanceColor(user.balance),
-                    }}
-                  >
-                    ${Math.abs(user.balance).toFixed(2)}
-                  </Text>
-                  <Text
-                    className="text-xs text-center"
-                    style={{
-                      fontFamily: "Montserrat",
-                      color: getBalanceColor(user.balance),
-                    }}
-                  >
-                    {getBalanceText(user.balance)}
-                  </Text>
+                  {/* Balance */}
+                  <View className="items-end">
+                    <Text
+                      className="text-lg font-bold mb-1"
+                      style={{
+                        fontFamily: "MontserratB",
+                        color: getBalanceColor(user.balance),
+                      }}
+                    >
+                      ₹{Math.abs(user.balance).toFixed(2)}
+                    </Text>
+                    <Text
+                      className="text-xs text-center"
+                      style={{
+                        fontFamily: "Montserrat",
+                        color: getBalanceColor(user.balance),
+                      }}
+                    >
+                      {getBalanceText(user.balance)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </View>
     </ScrollView>
